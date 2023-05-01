@@ -4,6 +4,9 @@ import sys
 import ctypes
 import pathlib
 import shutil
+import gitRepository
+
+repoList = []    #레포지토리 객체의 리스트
 
 root = Tk()
 root.title('File Manager')
@@ -122,6 +125,27 @@ def removeFileOrFolder():
     pathChange('')
     
 
+def gitInitClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Init을 시도하려는 폴더 : " + currentDirName)
+
+    # 브라우저의 현재 디렉토리가 아직 Git에 의해 관리되지 않는 경우에만 Git 리포지토리 만들기 메뉴를 제공합니다.
+    for i, item in enumerate(repoList):
+        if item.dirName == currentDirName:
+            print("이미 Git에 의해 관리되고 있는 폴더입니다.")
+            return
+
+    #관리 안되고 있는 폴더일 경우, Git init
+    temprepo = gitRepository.gitRepository(currentDirName)    #레포지토리 객체 생성
+
+    #함수 실행
+    gitRepository.gitRepositoryCreation(os, currentPath.get(), temprepo)
+
+    #리스트에 추가
+    repoList.append(temprepo)
+
+    print("Git Init 완료.")
+
 def emptyCommand():
     print("emptyCommand")
     
@@ -133,7 +157,7 @@ m.add_command(label ="Duplicate", command = renameFileOrFolder)
 m.add_separator()
 m.add_command(label ="Delete", command = removeFileOrFolder)
 m.add_separator()
-m.add_command(label ="Git", command = emptyCommand)
+m.add_command(label ="Git Init", command = gitInitClick)
 m.add_command(label ="Add", command = emptyCommand)
 m.add_command(label ="Commit", command = emptyCommand)
 m.add_separator()
