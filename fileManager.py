@@ -202,30 +202,73 @@ def gitUntrackClick():
     #함수 실행
     gitRepository.gitRMCached(currentDirName, repoDict[parentDirName])
 
-def GitRenameClick():
+def gitRenameClick():
     currentDirName = list.get(list.curselection()[0])
     print("Git Rename을 시도하려는 파일 : " + currentDirName)
     parentDirName = currentPath.get().split('\\')[-1]
     #함수 실행
     gitRepository.gitMV(currentDirName, repoDict[parentDirName])
 
-def emptyCommand():
-    print("emptyCommand")
-    
+def gitModifiedClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Modified를 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitModified(currentDirName, repoDict[parentDirName])
+
 
 m = Menu(root, tearoff = 0)
 m.add_command(label ="Open", command = changePathByClick)
 m.add_command(label ="Duplicate", command = duplicateFileOrFolder)
-m.add_command(label ="Duplicate", command = renameFileOrFolder)
-m.add_separator()
+m.add_command(label ="Rename", command = renameFileOrFolder)
 m.add_command(label ="Delete", command = removeFileOrFolder)
 m.add_separator()
-m.add_command(label ="Git Init", command = gitInitClick)
-m.add_command(label ="Add", command = gitAddClick)
-m.add_command(label ="Commit", command = gitCommitClick)
-m.add_separator()
-m.add_command(label ="Push", command = emptyCommand) #push는 구현x
 
+
+def menu():
+    m.add_command(label ="Git Init", command = gitInitClick)
+
+def menuUntracked():
+    m.add_command(label ="Add", command = gitAddClick)
+
+def menuUnmodified():
+    m.add_command(label ="Add", command = gitAddClick)
+    m.add_command(label ="Modified", command = gitModifiedClick)
+
+def menuModified():
+    m.add_command(label ="Add", command = gitAddClick)
+    m.add_command(label ="Undo", command = gitUndoClick)
+
+def menuStaged():
+    m.add_command(label ="Commit", command = gitCommitClick)
+    m.add_command(label ="Undo", command = gitUndoClick)
+
+def menuCommitted():
+    m.add_command(label ="Delete", command = gitDeleteClick)
+    m.add_command(label ="Untrack", command = gitUntrackClick)
+    m.add_command(label ="Rename", command = gitRenameClick)
+
+
+def menuAdd():
+    file = list.get(list.curselection()[0])
+    parentFile = currentPath.get().split('\\')[-1]
+    if parentFile in repoDict.keys():
+        repo = repoDict[parentFile]
+        match gitRepository.checkStatus(file, repo):
+            case 'unmodified':
+                menuUnmodified()
+            case 'modified':
+                menuModified()
+            case 'staged':
+                menuStaged()
+            case 'committed':
+                menuCommitted()
+            case 'untracked':
+                menuUntracked()
+    else:
+        menu()
+
+#menuAdd()
 
 def right_click(event):
     try:
