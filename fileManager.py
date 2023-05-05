@@ -6,7 +6,7 @@ import pathlib
 import shutil
 import gitRepository
 
-repoList = []    #레포지토리 객체의 리스트
+repoDict = {}    #레포지토리 객체를 value로 갖고, 폴더명을 key로 갖는 딕셔너리
 
 root = Tk()
 root.title('File Manager')
@@ -20,8 +20,25 @@ def pathChange(*event):
     # Clearing the list
     list.delete(0, END)
     # Inserting the files and directories into the list
+    parentFile = currentPath.get().split('\\')[-1]
     for file in directory:
-        list.insert(0, file)
+        if False:
+        #if parentFile in repoDict.keys():
+            repo = repoDict[parentFile]
+            match gitRepository.checkStatus(file, repo):
+                case 'unmodified':
+                    list.insert(0, '(u)' + file)
+                case 'modified':
+                    list.insert(0, '(m)' + file)
+                case 'staged':
+                    list.insert(0, '(s)' + file)
+                case 'committed':
+                    list.insert(0, '(c)' + file)
+                case 'untracked':
+                    list.insert(0, '(unt)' + file)
+        else:
+            list.insert(0, file)
+
 
 def changePathByClick(event=None):
     # Get clicked item.
@@ -127,10 +144,11 @@ def removeFileOrFolder():
 
 def gitInitClick():
     currentDirName = list.get(list.curselection()[0])
+    path = os.path.join(currentPath.get(), currentDirName)
     print("Git Init을 시도하려는 폴더 : " + currentDirName)
 
     # 브라우저의 현재 디렉토리가 아직 Git에 의해 관리되지 않는 경우에만 Git 리포지토리 만들기 메뉴를 제공합니다.
-    for i, item in enumerate(repoList):
+    for i, item in enumerate(repoDict):
         if item.dirName == currentDirName:
             print("이미 Git에 의해 관리되고 있는 폴더입니다.")
             return
@@ -139,12 +157,57 @@ def gitInitClick():
     temprepo = gitRepository.gitRepository(currentDirName)    #레포지토리 객체 생성
 
     #함수 실행
-    gitRepository.gitRepositoryCreation(os, currentPath.get(), temprepo)
+    gitRepository.gitRepositoryCreation(os, path, temprepo)
 
     #리스트에 추가
-    repoList.append(temprepo)
-
+    repoDict[currentDirName] = temprepo
     print("Git Init 완료.")
+
+def gitAddClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Add를 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitAdd(currentDirName, repoDict[parentDirName])
+
+    print("Git Add 완료.")
+    print(repoDict[parentDirName].staged)
+    pathChange('') # 디스플레이 재호출
+
+def gitCommitClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Commit을 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitCommit(currentDirName, repoDict[parentDirName])
+
+def gitUndoClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Undo를 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitRestore(currentDirName, repoDict[parentDirName])
+
+def gitDeleteClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Delete를 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitRM(currentDirName, repoDict[parentDirName])
+
+def gitUntrackClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Untrack을 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitRMCached(currentDirName, repoDict[parentDirName])
+
+def GitRenameClick():
+    currentDirName = list.get(list.curselection()[0])
+    print("Git Rename을 시도하려는 파일 : " + currentDirName)
+    parentDirName = currentPath.get().split('\\')[-1]
+    #함수 실행
+    gitRepository.gitMV(currentDirName, repoDict[parentDirName])
 
 def emptyCommand():
     print("emptyCommand")
@@ -158,10 +221,10 @@ m.add_separator()
 m.add_command(label ="Delete", command = removeFileOrFolder)
 m.add_separator()
 m.add_command(label ="Git Init", command = gitInitClick)
-m.add_command(label ="Add", command = emptyCommand)
-m.add_command(label ="Commit", command = emptyCommand)
+m.add_command(label ="Add", command = gitAddClick)
+m.add_command(label ="Commit", command = gitCommitClick)
 m.add_separator()
-m.add_command(label ="Push", command = emptyCommand)
+m.add_command(label ="Push", command = emptyCommand) #push는 구현x
 
 
 def right_click(event):

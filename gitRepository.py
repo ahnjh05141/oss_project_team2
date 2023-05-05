@@ -8,26 +8,32 @@ class gitRepository:
     def __init__(self, name):
         self.dirName = name
 
+def checkStatus(file, repo):
+    if file in repo.unmodified:
+        return 'unmodified'
+    elif file in repo.modified:
+        return 'modified'
+    elif file in repo.staged:
+        return 'staged'
+    elif file in repo.committed:
+        return 'committed'
+    else:
+        return 'untracked'
 
 def gitRepositoryCreation(os, currentPath, repo):    #현재 Path를 인풋값으로 작동
     #이 서비스는 모든 로컬 디렉터리를 깃 저장소로 전환할 수 있도록 지원합니다.
-
     # Get all Files and Folders from the given Directory
-    listOfFile = os.listdir(currentPath)
-    for i, item in enumerate(listOfFile):
-        if len(item.split('.')) != 1:    # 파일 이름을 확인 - 파일일 경우
-            print(item)
-            repo.unmodified.append(item)
+    directory = os.listdir(currentPath)
+    for file in directory:
+        if len(file.split('.')) != 1:    # 파일 이름을 확인 - 파일일 경우
+            print(file)
+            repo.unmodified.append(file)
         else:    # 파일 이름을 확인 - 폴더일 경우
-            print(item)
-            gitRepositoryCreation(os, currentPath + "\\" + item, repo)    #재귀
-
-    print(repo)
-
+            gitRepositoryCreation(os, currentPath + "\\" + file, repo)    #재귀
 
 def gitAdd(file, repo):    # git add
     repo.staged.append(file)    #staged에 넣음
-    if file in repo.modified:    #(modified -> staged;인 경우, modified에서도 삭제해야함
+    if file in repo.modified:    #(modified -> staged;인 경우, modified에서 삭제
         repo.modified.remove(file)
 
 def gitRestore(file, repo):    # git restore
