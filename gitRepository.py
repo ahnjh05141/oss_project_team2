@@ -8,6 +8,12 @@ class gitRepository:
     def __init__(self, name):
         self.dirName = name
 
+    def checkStatus(repo):
+        print("\nUnmodified Files :",repo.unmodified)
+        print("Modified Files :",repo.modified)
+        print("Staged Files :",repo.staged)
+        print("Committed Files :",repo.committed, "\n")
+
 def checkStatus(file, repo):
     if file in repo.unmodified:
         return 'unmodified'
@@ -26,7 +32,6 @@ def gitRepositoryCreation(os, currentPath, repo):    #현재 Path를 인풋값�
     directory = os.listdir(currentPath)
     for file in directory:
         if len(file.split('.')) != 1:    # 파일 이름을 확인 - 파일일 경우
-            print(file)
             repo.unmodified.append(file)
         else:    # 파일 이름을 확인 - 폴더일 경우
             gitRepositoryCreation(os, currentPath + "\\" + file, repo)    #재귀
