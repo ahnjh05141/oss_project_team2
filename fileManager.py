@@ -14,11 +14,17 @@ root.geometry("800x500")
 root.grid_columnconfigure(2, weight=1)
 root.grid_rowconfigure(2, weight=1)
 
+repos = []
+commits = {}
+ModifiedTime = {}
 
 # File Managing Methods ----------------------------------------------------------------------------------
 
 def removeIcon(picked):
-    return picked.strip("📄").strip("📁")
+    icons = ["📄", "📁"]
+    for icon in icons:
+        picked = picked.strip(icon)
+    return picked
 
 def pathChange(*event):
     # Get all Files and Folders from the given Directory
@@ -27,20 +33,32 @@ def pathChange(*event):
     list.delete(0, END)
     # Inserting the files and directories into the list
     for file in directory:
-        # get full path
         path = os.path.join(currentPath.get(), file)
-        # get icon and file type
+        
         if os.path.isfile(path):
             icon = "📄" # file icon
             filetype = "." + file.split(".")[-1] # get file extension
         elif os.path.isdir(path):
             icon = "📁" # folder icon
             filetype = "" # no file type for folders
-        # Insert file and icon into the list
         list.insert(END, f"{icon}{file}")
 
+        time = os.path.getmtime(file)
+        
+        try:
+            if ModifiedTime[file] != time:
+                print(file)
+                try:
+                    status = checkStatus(file, repos[findMasterBranch()][0])
+                    gitModified(file)
+                except:
+                    print("No repository yet")
+        except:
+            print("Nothing's Modified")
+        ModifiedTime[file] = time
 
-def changePathByClick(event=None):
+
+def changePathByClick(event=None):      # open
     # Get clicked item.
     try : 
         picked = list.get(list.curselection()[0])
@@ -48,7 +66,8 @@ def changePathByClick(event=None):
         
         # Check if item is file, then open it
         if os.path.isfile(path):
-            print('Opening: '+path)
+            time = os.path.getmtime(removeIcon(path))
+            ModifiedTime[removeIcon(picked)] = time
             os.system("start "+ path)
         # Set new path, will trigger pathChange function.
         else:
@@ -141,10 +160,6 @@ def removeFileOrFolder(*event):
 
 
 # Git repo skeleton => repos[ [REPO_OBJECT, path, name, branch, message] , [], ... ]
-
-repos = []
-
-commits = {}
 
 
 def findMasterBranch():
@@ -512,7 +527,7 @@ terminal.grid(sticky="NSEW", column=1, row=3, columnspan=2, ipady=10, ipadx=10)
 # Menu Bar
 menubar = Menu(root)
 menubar.add_command(label="Create", command=createFileOrFolder)
-menubar.add_command(label="Open (Enter)", command=changePathByClick)
+menubar.add_command(label="Open", command=changePathByClick)
 menubar.add_command(label="Rename", command=renameFileOrFolder)
 menubar.add_command(label="Duplicate", command=duplicateFileOrFolder)
 menubar.add_command(label="Remove (Delete)", command=removeFileOrFolder)
