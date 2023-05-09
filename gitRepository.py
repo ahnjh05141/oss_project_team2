@@ -67,5 +67,9 @@ def gitCommit(file, repo):    # git commit
     repo.committed.append(file)
 
 def gitModified(file, repo):
-    repo.unmodified.remove(file)
-    repo.modified.append(file)
+    if file in repo.unmodified:
+        repo.unmodified.remove(file)
+        repo.modified.append(file)
+    elif file in repo.committed:
+        repo.committed.remove(file)
+        repo.modified.append(file)
