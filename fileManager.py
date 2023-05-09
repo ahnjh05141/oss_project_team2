@@ -10,7 +10,7 @@ import gitRepository
 
 root = Tk()
 root.title('File Manager')
-root.geometry("800x500")
+root.geometry("500x300")
 root.grid_columnconfigure(2, weight=1)
 root.grid_rowconfigure(2, weight=1)
 
@@ -43,37 +43,30 @@ def pathChange(*event):
             filetype = "" # no file type for folders
         list.insert(END, f"{icon}{file}")
 
-        time = os.path.getmtime(file)
-        
-        try:
-            if ModifiedTime[file] != time:
-                print(file)
-                try:
-                    status = checkStatus(file, repos[findMasterBranch()][0])
+        if os.path.isfile(path):
+            try:
+                time =os.path.getmtime(path)
+                if time != ModifiedTime[file]:
                     gitModified(file)
-                except:
-                    print("No repository yet")
-        except:
-            print("Nothing's Modified")
-        ModifiedTime[file] = time
+                    ModifiedTime[file] = time
+            except:
+                continue
 
 
 def changePathByClick(event=None):      # open
-    # Get clicked item.
-    try : 
-        picked = list.get(list.curselection()[0])
-        path = os.path.join(currentPath.get(), removeIcon(picked))
+    try:
+        picked = removeIcon(list.get(list.curselection()[0]))
+        path = os.path.join(currentPath.get(), picked)
         
-        # Check if item is file, then open it
         if os.path.isfile(path):
-            time = os.path.getmtime(removeIcon(path))
-            ModifiedTime[removeIcon(picked)] = time
+            time = os.path.getmtime(path)
+            ModifiedTime[picked] = time
+            
             os.system("start "+ path)
-        # Set new path, will trigger pathChange function.
         else:
             currentPath.set(path)
     except:
-        return
+        print("Please select your file first\n")
         
 
 def goBack(event=None):
@@ -174,12 +167,12 @@ def checkStatus(file, repo):
 # GIT Command Methods ----------------------------------------------------------------------
 
 def gitStatus():
+    pathChange('')
     try:
-        commit = str(commits).replace('[', '').replace(']', '').replace('\'', '')
         repo = repos[findMasterBranch()][0]
         print("==================================================================")
         print("Current WorkSpace :", repo.dirName)
-        print("* Commits :",commit)
+        print("* Commits :",str(commits).replace('[', '').replace(']', '').replace('\'', ''))
         print("\nUnmodified Files :",str(repo.unmodified).replace('\'',''))
         print("Modified Files :",str(repo.modified).replace('\'',''))
         print("Staged Files :",str(repo.staged).replace('\'',''))
@@ -281,9 +274,6 @@ def gitMV(file_newname):
         print("\nMake repository first \n")
         return
 
-def gitCommitMessage(message):
-    commits[message] = repos[findMasterBranch()][0].committed
-
 def gitCommit(file_message):
     if len(repos) > 0:
         try:
@@ -308,7 +298,7 @@ def gitCommit(file_message):
                 return
             else:
                 gitRepository.gitCommit(file, repos[findMasterBranch()][0])
-                gitCommitMessage(message)
+                commits[message] = repos[findMasterBranch()][0].committed
                 print("\n", file, " Successfully committed with message", message, "\n")
                 gitStatus()
         else:
@@ -327,7 +317,7 @@ def gitModified(file):
     
     try:
         gitRepository.gitModified(file, repos[findMasterBranch()][0])
-        print("\n", file, " Successfully modified \n")
+        print(file, "has been Modified\n")
     except:
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
 
@@ -429,17 +419,8 @@ def gitStatusClick(*event):
     gitStatus()
 
 def gitInitClick(*event):
-    try:
-        file = list.get(list.curselection()[0])
-        path = os.path.join(currentPath.get(), removeIcon(file))
-        if os.path.isfile(path):
-            print("\nCan't make repository. Choose a directory, not file \n")
-            return
-    except:
-        path = currentPath.get()
+    path = currentPath.get()
     gitInit(path)
-    changePathByClick()
-
 
 def gitAddClick(*event):
     try:
@@ -545,9 +526,9 @@ menu_file.add_command(label ="Duplicate", command = duplicateFileOrFolder)
 menu_file.add_command(label ="Rename", command = renameFileOrFolder)
 menu_file.add_command(label ="Delete", command = removeFileOrFolder)
 menu_file.add_separator()
-menu_file.add_command(label ="git status", command = gitStatusClick)
+menu_file.add_command(label ="git init", command = gitInitClick)
 menu_file.add_separator()
-menu_file.add_command(label ="git init (selected folder)", command = gitInitClick)
+menu_file.add_command(label ="git status", command = gitStatusClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git add", command = gitAddClick)
 menu_file.add_command(label ="git restore", command = gitRestoreClick)
@@ -602,6 +583,6 @@ terminal.bind('<Return>', runTerminalCommands)
 
 # Run Program ---------------------------------------------------------------------------
 
-print(" < GIT File Manager > v.1.3 \n")
+print(" < GIT File Manager > v.1.4 \n")
 pathChange('')
 root.mainloop()
