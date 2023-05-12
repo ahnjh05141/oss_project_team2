@@ -21,10 +21,11 @@ ModifiedTime = {}
 # File Managing Methods ----------------------------------------------------------------------------------
 
 def removeIcon(picked):
-    icons = ["📄", "📁"]
+    icons = ["📄", "📁", "ⓤ", "ⓜ", "ⓢ", "ⓒ"]
     for icon in icons:
         picked = picked.strip(icon)
     return picked
+
 
 def pathChange(*event):
     # Get all Files and Folders from the given Directory
@@ -34,23 +35,39 @@ def pathChange(*event):
     # Inserting the files and directories into the list
     for file in directory:
         path = os.path.join(currentPath.get(), file)
-        
+
         if os.path.isfile(path):
-            icon = "📄" # file icon
-            filetype = "." + file.split(".")[-1] # get file extension
+            if file is not None and len(repos) != 0:
+                status = checkStatus(file, repos[findMasterBranch()][0])
+
+                if status == "unmodified":
+                    icon = "ⓤ"
+                elif status == "modified":
+                    icon = "ⓜ"
+                elif status == "staged":
+                    icon = "ⓢ"
+                elif status == "committed":
+                    icon = "ⓒ"
+
+                else:
+                    icon = "📄"  # file icon
+            else:
+                icon = "📄"  # file icon
+            filetype = "." + file.split(".")[-1]  # get file extension
         elif os.path.isdir(path):
-            icon = "📁" # folder icon
-            filetype = "" # no file type for folders
+            icon = "📁"  # folder icon
+            filetype = ""  # no file type for folders
         list.insert(END, f"{icon}{file}")
 
         if os.path.isfile(path):
             try:
-                time =os.path.getmtime(path)
+                time = os.path.getmtime(path)
                 if time != ModifiedTime[file]:
                     gitModified(file)
                     ModifiedTime[file] = time
             except:
                 continue
+
 
 def changePathByClick(event=None):      # open
     try:
