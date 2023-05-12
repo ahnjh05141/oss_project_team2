@@ -14,6 +14,10 @@ root.geometry("500x300")
 root.grid_columnconfigure(2, weight=1)
 root.grid_rowconfigure(2, weight=1)
 
+path_gitData = os.path.join(os.getcwd(), "gitData") # git Restore을 위해 백업파일을 저장하는 폴더(gitData)의 위치
+shutil.rmtree(path_gitData) # gitData를 제거 후
+os.mkdir("gitData") # 다시 생성(gitData의 백업 파일을 초기화 하는 기능)
+
 repos = []
 commits = {}
 ModifiedTime = {}
@@ -52,6 +56,7 @@ def pathChange(*event):
             except:
                 continue
 
+
 def changePathByClick(event=None):      # open
     try:
         picked = removeIcon(list.get(list.curselection()[0]))
@@ -65,11 +70,13 @@ def changePathByClick(event=None):      # open
         else:
             currentPath.set(path)
     except:
-        print("Please select your file first\n")      
+        print("Please select your file first\n")
+        
 
 def goBack(event=None):
     newPath = pathlib.Path(currentPath.get()).parent
     currentPath.set(newPath)
+
 
 def createFileOrFolder():
     global top
@@ -91,6 +98,7 @@ def newFileOrFolder():
     # destroy the top
     top.destroy()
     pathChange('')
+
 
 def renameFileOrFolder():
     global top
@@ -118,6 +126,7 @@ def renFileOrFolder():
     except:
         print("Please select your file first\n")
         
+
 def duplicateFileOrFolder():
     picked = list.get(list.curselection()[0])
     path = os.path.join(currentPath.get(), removeIcon(picked))
@@ -130,6 +139,7 @@ def duplicateFileOrFolder():
     pathChange('')
     
     #shutil.copy(path)
+
 
 def removeFileOrFolder(*event):
     picked = list.get(list.curselection()[0])
@@ -144,7 +154,10 @@ def removeFileOrFolder(*event):
     pathChange('')
 
 
+
+
 # Git repo skeleton => repos[ [REPO_OBJECT, path, name, branch, message] , [], ... ]
+
 
 def findMasterBranch():
     for i in range(0, len(repos)):
@@ -188,7 +201,7 @@ def gitAdd(file):
         print("\n", file, " Successfully added \n")
         
 
-def gitRestore(file):
+def gitRestore(file,path):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
     except:
@@ -199,40 +212,49 @@ def gitRestore(file):
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
     elif status == "modified" or status == "staged":
         gitRepository.gitRestore(file, repos[findMasterBranch()][0])
+        path_repo = repos[findMasterBranch()][1] # 레포의 디렉토리
+        path_subroot = path[len(path_repo):] # 레포에서 해당 폴더까지 도달하는 중간 과정
+        path_duplicate = path_gitData + path_subroot # gitData에 저장된 복제본의 위치
+        os.remove(path) # 로컬에서 지우고
+        shutil.copy2(path_duplicate, path) # 백업에서 로컬로 복제
         print("\n", file, " Successfully restored \n")
     else:
         print("\nThere is no modified or staged file called [", file, "]")
         
 
-def gitRM(file):
+def gitRM(file, path):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
     except:
         print("\nMake repository first \n")
         return
-    
+
     if status == "not_exists":
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2],"\n")
-    elif status == "committed":
-        gitRepository.gitRM(file, repos[findMasterBranch()][0])
-        print("\n", file, " Successfully removed to staging area \n")
+    elif status == "untracked":
+        print("\nThere is no tracked file called [", file, "]")
     else:
-        print("\nThere is no commited file called [", file, "]")
+        gitRepository.gitRM(file, repos[findMasterBranch()][0])
+        os.remove(path)
+        print("\n", file, " Successfully staged remove \n")
+
 
 def gitRMCached(file):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
+        print(status)
     except:
         print("\nMake repository first \n")
         return
     
     if status == "not_exists":
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2],"\n")
-    elif status == "committed":
-        gitRepository.gitRMCached(file, repos[findMasterBranch()][0])
-        print("\n", file, " Successfully removed to untracked \n")
+    elif status == "untracked":
+        print("\nThere is no tracked file called [", file, "]")
     else:
-        print("\nThere is no commited file called [", file, "]")
+        gitRepository.gitRMCached(file, repos[findMasterBranch()][0])
+        print("\n", file, " Successfully staged remove \n")
+
 
 def gitMV(file_newname):
     if len(repos) > 0:
@@ -297,6 +319,7 @@ def gitCommit(file_message):
         print("\nMake repository first \n")
         return
  
+
 def gitModified(file):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
@@ -310,6 +333,8 @@ def gitModified(file):
     except:
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
 
+
+
 def gitInit(path):
     currentDirName = path.split('\\')[-1]
            
@@ -321,7 +346,7 @@ def gitInit(path):
     temprepo = gitRepository.gitRepository(currentDirName)    # 레포 객체 생성
     temprepo.dirName = currentDirName
 
-    gitRepository.gitRepositoryCreation(os, path, temprepo)
+    gitRepository.gitRepositoryCreation(os, path, temprepo, path_gitData)
 
 
     if len(repos) == 0:         # 처음 만든 레포라면, 마스터 브랜치를 달아주자
@@ -330,10 +355,12 @@ def gitInit(path):
         branch = ""
 
     message = ""
-    repos.append([temprepo, path, currentDirName, branch, message])    # 리스트에 추가
+    repos.append([temprepo, path, currentDirName, branch, message])    # 레포 리스트에 추가
 
     print("\n* New Git Repo :", path, "- ("+branch+")")
     gitStatus()
+    
+
 
 def git(command):
     if command == 'help':
@@ -372,6 +399,8 @@ def git(command):
     else:
         print("> Unknown GIT command [ git",command,"] found")
 
+
+   
 def runTerminalCommands(event):
     line = terminal.get()
     terminal.delete(0, len(line))
@@ -393,13 +422,17 @@ def runTerminalCommands(event):
     else:
         print("> Unknown command [",line,"] found")
 
+
+
+
 # Git Click Commands
 
 def gitStatusClick(*event):
     gitStatus()
 
 def gitInitClick(*event):
-    path = currentPath.get()
+    file = list.get(list.curselection()[0])
+    path = os.path.join(currentPath.get(), removeIcon(file))
     gitInit(path)
 
 def gitAddClick(*event):
@@ -412,17 +445,26 @@ def gitAddClick(*event):
 def gitRestoreClick(*event):
     try:
         file = list.get(list.curselection()[0])
-        gitRestore(removeIcon(file))
+        path = os.path.join(currentPath.get(), removeIcon(file))
+        gitRestore(removeIcon(file),path)
     except:
         print("\nPlease choose a file first \n")
 
 def gitRMClick(*event):
     try:
         file = list.get(list.curselection()[0])
-        gitRM(removeIcon(file))
+        path = os.path.join(currentPath.get(), removeIcon(file))
+        gitRM(removeIcon(file),path)
     except:
         print("\nPlease choose a file first \n")
-        
+
+def gitRMCachedClick(*event):
+    try:
+        file = list.get(list.curselection()[0])
+        gitRMCached(removeIcon(file))
+    except:
+        print("\nPlease choose a file first \n")
+
 def gitMVClick(*event):
     if len(repos) > 0:
         newname = str(input("new name : "))
@@ -451,6 +493,7 @@ def gitCommitClick(*event):
     
 def emptyCommand():
     print("")
+
 
 
 # Program Components -------------------------------------------------------------------
@@ -512,6 +555,7 @@ menu_file.add_separator()
 menu_file.add_command(label ="git add", command = gitAddClick)
 menu_file.add_command(label ="git restore", command = gitRestoreClick)
 menu_file.add_command(label ="git remove", command = gitRMClick)
+menu_file.add_command(label ="git remove --cached", command = gitRMCachedClick)
 menu_file.add_command(label ="git move", command = gitMVClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git commit (selected file)", command = gitCommitClick)
@@ -557,6 +601,7 @@ root.bind("<Delete>", removeFileOrFolder)
 list.bind('<Double-1>', changePathByClick)
 
 terminal.bind('<Return>', runTerminalCommands)
+
 
 
 # Run Program ---------------------------------------------------------------------------
