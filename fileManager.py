@@ -52,7 +52,6 @@ def pathChange(*event):
             except:
                 continue
 
-
 def changePathByClick(event=None):      # open
     try:
         picked = removeIcon(list.get(list.curselection()[0]))
@@ -66,13 +65,11 @@ def changePathByClick(event=None):      # open
         else:
             currentPath.set(path)
     except:
-        print("Please select your file first\n")
-        
+        print("Please select your file first\n")      
 
 def goBack(event=None):
     newPath = pathlib.Path(currentPath.get()).parent
     currentPath.set(newPath)
-
 
 def createFileOrFolder():
     global top
@@ -94,7 +91,6 @@ def newFileOrFolder():
     # destroy the top
     top.destroy()
     pathChange('')
-
 
 def renameFileOrFolder():
     global top
@@ -122,7 +118,6 @@ def renFileOrFolder():
     except:
         print("Please select your file first\n")
         
-
 def duplicateFileOrFolder():
     picked = list.get(list.curselection()[0])
     path = os.path.join(currentPath.get(), removeIcon(picked))
@@ -135,7 +130,6 @@ def duplicateFileOrFolder():
     pathChange('')
     
     #shutil.copy(path)
-
 
 def removeFileOrFolder(*event):
     picked = list.get(list.curselection()[0])
@@ -150,10 +144,7 @@ def removeFileOrFolder(*event):
     pathChange('')
 
 
-
-
 # Git repo skeleton => repos[ [REPO_OBJECT, path, name, branch, message] , [], ... ]
-
 
 def findMasterBranch():
     for i in range(0, len(repos)):
@@ -243,7 +234,6 @@ def gitRMCached(file):
     else:
         print("\nThere is no commited file called [", file, "]")
 
-
 def gitMV(file_newname):
     if len(repos) > 0:
         try:
@@ -307,7 +297,6 @@ def gitCommit(file_message):
         print("\nMake repository first \n")
         return
  
-
 def gitModified(file):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
@@ -320,8 +309,6 @@ def gitModified(file):
         print(file, "has been Modified\n")
     except:
         print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
-
-
 
 def gitInit(path):
     currentDirName = path.split('\\')[-1]
@@ -347,8 +334,6 @@ def gitInit(path):
 
     print("\n* New Git Repo :", path, "- ("+branch+")")
     gitStatus()
-    
-
 
 def git(command):
     if command == 'help':
@@ -387,8 +372,6 @@ def git(command):
     else:
         print("> Unknown GIT command [ git",command,"] found")
 
-
-   
 def runTerminalCommands(event):
     line = terminal.get()
     terminal.delete(0, len(line))
@@ -409,9 +392,6 @@ def runTerminalCommands(event):
         
     else:
         print("> Unknown command [",line,"] found")
-
-
-
 
 # Git Click Commands
 
@@ -471,7 +451,6 @@ def gitCommitClick(*event):
     
 def emptyCommand():
     print("")
-
 
 
 # Program Components -------------------------------------------------------------------
@@ -578,7 +557,6 @@ root.bind("<Delete>", removeFileOrFolder)
 list.bind('<Double-1>', changePathByClick)
 
 terminal.bind('<Return>', runTerminalCommands)
-
 
 
 # Run Program ---------------------------------------------------------------------------
