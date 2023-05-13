@@ -1,5 +1,8 @@
+from distutils.dir_util import copy_tree
+
 class gitRepository:
     dirName = ""
+    untracked = []
     unmodified =  []
     modified = []
     staged = []
@@ -17,19 +20,24 @@ def whichStatus(file, repo):
         return "staged"
     elif file in repo.committed:
         return "committed"
+    elif file in repo.untracked:
+        return "untracked"
     else:
-        return "not_exists"
-    
+        return "not_exists"   
 
-def gitRepositoryCreation(os, currentPath, repo):    #현재 Path를 인풋값으로 작동
-    #이 서비스는 모든 로컬 디렉터리를 깃 저장소로 전환할 수 있도록 지원합니다.
+def initRecursion(os, currentPath, repo):
+    # 이 서비스는 모든 로컬 디렉터리를 깃 저장소로 전환할 수 있도록 지원합니다.
     # Get all Files and Folders from the given Directory
     directory = os.listdir(currentPath)
     for file in directory:
         if len(file.split('.')) != 1:    # 파일 이름을 확인 - 파일일 경우
             repo.unmodified.append(file)
         else:    # 파일 이름을 확인 - 폴더일 경우
-            gitRepositoryCreation(os, currentPath + "\\" + file, repo)    #재귀
+            initRecursion(os, currentPath + "\\" + file, repo)    #재귀
+
+def gitRepositoryCreation(os, currentPath, repo, gitData):    #현재 Path를 인풋값으로 작동
+    copy_tree(currentPath, gitData) # init 시에 해당 디렉토리의 모든 폴더,파일을 백업 폴더에 저장
+    initRecursion(os, currentPath, repo)
 
 def gitAdd(file, repo):    # git add
     repo.staged.append(file)    #staged에 넣음
@@ -49,13 +57,28 @@ def gitRestore(file, repo):    # git restore
         repo.modified.append(file)    #일단 modified로 넣음. 이걸 구분하는 건 없길래
 
 def gitRM(file, repo):    # git rm
-    #committed -> staged;
-    repo.committed.remove(file)
-    repo.staged.append(file)
+    #any status -> staged;
+    if file in repo.unmodified:
+        repo.unmodified.remove(file)
+        repo.staged.append(file)
+    elif file in repo.modified:
+        repo.modified.remove(file)
+        repo.staged.append(file)
+    elif file in repo.committed:
+        repo.committed.remove(file)
+        repo.staged.append(file)
 
 def gitRMCached(file, repo):    # git rm --cached
-    #committed -> untracked;
-    repo.committed.remove(file)
+    #any status -> staged;
+    if file in repo.unmodified:
+        repo.unmodified.remove(file)
+        repo.staged.append(file)
+    elif file in repo.modified:
+        repo.modified.remove(file)
+        repo.staged.append(file)
+    elif file in repo.committed:
+        repo.committed.remove(file)
+        repo.staged.append(file)
 
 def gitMV(file, newfile, repo):    # git mv
     #committed -> staged;
