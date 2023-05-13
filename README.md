@@ -7,8 +7,9 @@
 Python 설치 후, 터미널에서 “python fileManager.py” 명령어를 실행 
 
 
-### 참고 OS
-????
+### 참고 오픈소스
+https://github.com/x4nth055/pythoncode-tutorials/tree/master/gui-programming/file-explorer
 
-### 라이센스
-????
+### 라이센스(참고 오픈소스)
+MIT License
+Copyright (c) 2019 Rockikz
