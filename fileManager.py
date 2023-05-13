@@ -41,6 +41,15 @@ def pathChange(*event):
         path = os.path.join(currentPath.get(), file)
 
         if os.path.isfile(path):
+            try:
+                time = os.path.getmtime(path)
+                if time != ModifiedTime[file] and not gitRepository.isRestored(file, repos[findMasterBranch()][0]):
+                    gitModified(file)
+                    ModifiedTime[file] = time
+            except:
+                pass
+
+        if os.path.isfile(path):
             if file is not None and len(repos) != 0:
                 status = checkStatus(file, repos[findMasterBranch()][0])
 
@@ -62,15 +71,6 @@ def pathChange(*event):
             icon = "📁"  # folder icon
             filetype = ""  # no file type for folders
         list.insert(END, f"{icon}{file}")
-
-        if os.path.isfile(path):
-            try:
-                time = os.path.getmtime(path)
-                if time != ModifiedTime[file]:
-                    gitModified(file)
-                    ModifiedTime[file] = time
-            except:
-                continue
 
 
 def changePathByClick(event=None):      # open

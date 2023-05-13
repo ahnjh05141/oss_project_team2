@@ -7,9 +7,16 @@ class gitRepository:
     modified = []
     staged = []
     committed = []
-
+    restored = []
+    
     def __init__(self, name):
         self.dirName = name
+
+def isRestored(file, repo):
+    if file in repo.restored:
+        return True
+    else:
+        return False
 
 def whichStatus(file, repo):
     if file in repo.unmodified:
@@ -52,9 +59,11 @@ def gitRestore(file, repo):    # git restore
     if file in repo.modified:    #modified -> unmodified;인 경우
         repo.modified.remove(file)
         repo.unmodified.append(file)
+        repo.restored.append(file)
     elif file in repo.staged:    #staged -> modified or untracked;인 경우 -> git restore --staged
         repo.staged.remove(file)
-        repo.modified.append(file)    #일단 modified로 넣음. 이걸 구분하는 건 없길래
+        repo.unmodified.append(file)    #일단 modified로 넣음. 이걸 구분하는 건 없길래
+        repo.restored.append(file)
 
 def gitRM(file, repo):    # git rm
     #any status -> staged;
