@@ -8,7 +8,7 @@ Python 설치 후, 터미널에서 “python fileManager.py” 명령어를 실�
 
 ### 최종 실행화면
 
-![최종 실행화면](https://github.com/ahnjh05141/oss_project_team2/assets/56011947/e70b3394-8b7f-4b1b-a464-7d44813b5115)
+![최종 실행화면](https://github.com/ahnjh05141/oss_project_team2/assets/56011947/5d68eac9-0d98-4f8c-8ff5-df7281d61342)
 
 
 ### 참고 오픈소스
