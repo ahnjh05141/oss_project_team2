@@ -1,107 +1,178 @@
-from distutils.dir_util import copy_tree
+import requests
+import re
+import smtplib
+from email.mime.text import MIMEText
 
-class gitRepository:
-    dirName = ""
-    untracked = []
-    unmodified =  []
-    modified = []
-    staged = []
-    committed = []
-    restored = []
-    
-    def __init__(self, name):
-        self.dirName = name
+import sys, getopt
 
-def isRestored(file, repo):
-    if file in repo.restored:
-        return True
-    else:
-        return False
+import json
+config = ""
+def load_config():
+	global config
+	with open('config.json', 'r') as config_file:
+		config = json.load(config_file)
+	config['github_api_baseurl'] = "https://"+config['github_api_user']+":"+config['github_api_token']+"@"+"api.github.com"
+	return
 
-def whichStatus(file, repo):
-    if file in repo.unmodified:
-        return "unmodified"
-    elif file in repo.modified:
-        return "modified"
-    elif file in repo.staged:
-        return "staged"
-    elif file in repo.committed:
-        return "committed"
-    elif file in repo.untracked:
-        return "untracked"
-    else:
-        return "not_exists"   
+def load_author_ignore():
+	author_ignores = set()
+	f = open("author_ignore.txt", "r")
+	lines = f.readlines()
+	for line in lines:
+		line = line.strip()
+		if line == "":
+			continue
+		author_ignores.add(line)
+	f.close()
+	return author_ignores
+def load_basebranch():
+	branches = set()
+	f = open("branch_base.txt", "r")
+	lines = f.readlines()
+	for line in lines:
+		line = line.strip()
+		if line == "":
+			continue
+		branches.add(line)
+	f.close()
+	return branches
+def append_to_basebranch(branch_name):
+	#  append newly accepted branch name to branch_base.txt
+	with open("branch_base.txt", "a") as f:
+		print(branch_name, file=f)
+	return
 
-def initRecursion(os, currentPath, repo):
-    # 이 서비스는 모든 로컬 디렉터리를 깃 저장소로 전환할 수 있도록 지원합니다.
-    # Get all Files and Folders from the given Directory
-    directory = os.listdir(currentPath)
-    for file in directory:
-        if len(file.split('.')) != 1:    # 파일 이름을 확인 - 파일일 경우
-            repo.unmodified.append(file)
-        else:    # 파일 이름을 확인 - 폴더일 경우
-            initRecursion(os, currentPath + "\\" + file, repo)    #재귀
+def get_branch_jsons():
+	res = ""
+	idx = 1
+	while True:
+		req = config['github_api_baseurl']+"/repos/"+config['github_team']+"/"+config['github_repository']+"/branches?page="+str(idx)+"&per_page=100"
+		r = requests.get(req)
+		if r.status_code == 404:
+			break
+		r_json = r.json()
+		if len(r_json) == 0:
+			break
+		if idx == 1:
+			res = r_json
+		else:
+			res = res + r_json
+		idx += 1
+	return res
+def has_assigned_issue(issue_number):
+	req = config['github_api_baseurl']+"/repos/"+config['github_team']+"/"+config['github_repository']+"/issues/"+str(issue_number)
+	r = requests.get(req)
+	if 'id' in r.json():
+		return True
+	else:
+		return False
+def parse_branch_names(target_branch_jsons):
+	branch_names = set()
+	for branch_json_elem in target_branch_jsons:
+		branch_names.add(str(branch_json_elem['name']))
+	return branch_names
+def find_unmatched_branch_names(branch_names):
+	# load base
+	base_branch_names = load_basebranch()
 
-def gitRepositoryCreation(os, currentPath, repo, gitData):    #현재 Path를 인풋값으로 작동
-    copy_tree(currentPath, gitData) # init 시에 해당 디렉토리의 모든 폴더,파일을 백업 폴더에 저장
-    initRecursion(os, currentPath, repo)
+	new_branch_names = branch_names - base_branch_names
 
-def gitAdd(file, repo):    # git add
-    repo.staged.append(file)    #staged에 넣음
-    if file in repo.modified:    #(modified -> staged;인 경우, modified에서 삭제
-        repo.modified.remove(file)
-    elif file in repo.unmodified:   #(unmodified -> staged;인 경우, unmodified에서 삭제
-        repo.unmodified.remove(file)
-    else:                           #(untracked -> staged;인 경우, untracked에서 삭제
-        repo.untracked.remove(file)
+	unmatched_branch_names = set()
+	for branch_name in new_branch_names:
+		branch_elements = branch_name.split('/')
 
-def gitRestore(file, repo):    # git restore
-    if file in repo.modified:    #modified -> unmodified;인 경우
-        repo.modified.remove(file)
-        repo.unmodified.append(file)
-        repo.restored.append(file)
-    elif file in repo.staged:    #staged -> modified or untracked;인 경우 -> git restore --staged
-        repo.staged.remove(file)
-        repo.unmodified.append(file)    #일단 modified로 넣음. 이걸 구분하는 건 없길래
-        repo.restored.append(file)
+		length = len(branch_elements)
+		if length < 1 or length > 3:
+			# error case
+			unmatched_branch_names.add(branch_name)
+			continue
+		if length == 1 and (branch_name == "master" or branch_name == "develop"):
+			continue
+		if not ((length == 2 and (branch_elements[0] == "hotfix" or branch_elements[0] == "issue")) or (length == 3 and branch_elements[0] == "feature")):
+			# error case
+			unmatched_branch_names.add(branch_name)
+			continue
+		if not branch_elements[1].isdigit():
+			# error case
+			unmatched_branch_names.add(branch_name)
+			continue
+		branch_issue_number = int(branch_elements[1])
+		if not has_assigned_issue(branch_issue_number):
+			unmatched_branch_names.add(branch_name)
+		else:
+			# for fast lookup on next monitoring, just bypass github api call for this branch
+			append_to_basebranch(branch_name)
+	return unmatched_branch_names
 
-def gitRM(file, repo):    # git rm
-    #any status -> staged;
-    if file in repo.unmodified:
-        repo.unmodified.remove(file)
-        repo.staged.append(file)
-    elif file in repo.modified:
-        repo.modified.remove(file)
-        repo.staged.append(file)
-    elif file in repo.committed:
-        repo.committed.remove(file)
-        repo.staged.append(file)
+def make_email_branch_info_set(source_branch_jsons, target_unmatched_branches):
+	email_with_branch_elements = dict()
+	for branch_json in source_branch_jsons:
+		if branch_json['name'] in target_unmatched_branches:
+			req = config['github_api_baseurl']+"/repos/"+config['github_team']+"/"+config['github_repository']+"/branches/"+branch_json['name']
+			r = requests.get(req)
+			email = str(r.json()['commit']['commit']['committer']['email'])
+			if not (email in email_with_branch_elements):
+				email_with_branch_elements[email] = list()
+			email_with_branch_elements[email].append(str(branch_json['name']))
+	return email_with_branch_elements
 
-def gitRMCached(file, repo):    # git rm --cached
-    #any status -> staged;
-    if file in repo.unmodified:
-        repo.unmodified.remove(file)
-        repo.staged.append(file)
-    elif file in repo.modified:
-        repo.modified.remove(file)
-        repo.staged.append(file)
-    elif file in repo.committed:
-        repo.committed.remove(file)
-        repo.staged.append(file)
+def send_mail(email_from, email_to, msgSubject, msgBody):
+	print("Branch naming convention mismatch caught. send mail to corresponding committer...")
+	if config['gmail_smtp_email'] != email_from:
+		print("Warning: Gmail SMTP email is not same with email source address")
 
-def gitMV(file, newfile, repo):    # git mv
-    #committed -> staged;
-    repo.committed.remove(file)
-    repo.staged.append(newfile)
+	smtp = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+	smtp.login(config['gmail_smtp_email'], config['gmail_smtp_machine_code'])
+	msg = MIMEText(msgBody)
+	msg['Subject'] = msgSubject
+	msg['From'] = email_from+ "noreply"
+	msg['To'] = email_to
+	smtp.sendmail(email_from, email_to, msg.as_string())
+	smtp.quit()
+	return
+def send_unmatched_branch_mail(email_to, branch_names):
+	# message body creation
+	branch_count = len(branch_names)
+	msgBody = "Hello, This is branch manager of project "+config['github_team']+"/"+config['github_repository']+".\n\n"
+	msgBody += "You've got this mail because you committed last on the newly created branch which is made with wrong naming convention.\n"
+	if branch_count == 1:
+		msgBody += "The following branch has the problem:\n"
+	elif branch_count > 1:
+		msgBody += "The following branches have the problem:\n"
+	else:
+		# error
+		pass
+	for branch_name in branch_names:
+		msgBody += " - "+branch_name+"\n"
+	msgBody += "Please rename the branch with the following convention:\n"
+	msgBody += "1. Make a github issue of necessary.\n"
+	msgBody += "2. Make branch name follow the format: hotfix/<issue#>, feature/<issue#>/<desc.> or issue/<issue#>.\n"
+	msgBody += "You don't need to reply this message.\n\n"
+	msgBody += "Thank you.\n"
+	# send mail
+	send_mail(config['gmail_smtp_email'], email_to, "Branch naming convention mismatch", msgBody)
 
-def gitCommit(file, repo):    # git commit
-    repo.staged.remove(file)
-    repo.committed.append(file)
+	return
 
-def gitModified(file, repo):
-    if file in repo.unmodified:
-        repo.unmodified.remove(file)
-        repo.modified.append(file)
-    elif file in repo.committed:
-        repo.committed.remove(file)
-        repo.modified.append(file)
+
+def monitor_once():
+	branch_jsons = get_branch_jsons()
+	branch_names = parse_branch_names(branch_jsons)
+
+	unmatched_branch_names = find_unmatched_branch_names(branch_names)
+
+	email_branch_info_set = make_email_branch_info_set(branch_jsons, unmatched_branch_names)
+
+	author_ignores_to_mail = load_author_ignore()
+	for key, value in email_branch_info_set.items():
+		if key in author_ignores_to_mail:
+			print("Author "+key+" make branches with wrong naming, but ignored by author_ignore.txt")
+			continue
+		send_unmatched_branch_mail(key, value)
+	return
+
+if __name__ == "__main__":
+	print("branch manager mointoring...")
+	load_config()
+	monitor_once()
+	print("branch manager mointoring end.")
