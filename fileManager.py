@@ -5,6 +5,8 @@ import ctypes
 import pathlib
 import shutil
 import gitRepository
+import clone
+
 
 # GUI Skeleton
 
@@ -443,6 +445,25 @@ def runTerminalCommands(event):
 
 # Git Click Commands
 
+def clonePublicClick(*event):
+    print("Enter GitHub address (https://~~~.git)")
+    address = input()
+    file = list.get(list.curselection()[0])
+    local = os.path.join(currentPath.get(), removeIcon(file))
+    clone.clone_public(local, address)
+
+def clonePrivateClick(*event):
+    print("Enter GitHub address (https://~~~.git)")
+    address = input()
+    print("Enter the ID")
+    id = input()
+    print("Enter the token (PAT)")
+    token = input()
+    file = list.get(list.curselection()[0])
+    local = os.path.join(currentPath.get(), removeIcon(file))
+    clone.clone_private(local, address, id)
+    clone.store(address, id, token)
+
 def gitStatusClick(*event):
     gitStatus()
 
@@ -564,6 +585,8 @@ menu_file.add_command(label ="Duplicate", command = duplicateFileOrFolder)
 menu_file.add_command(label ="Rename", command = renameFileOrFolder)
 menu_file.add_command(label ="Delete", command = removeFileOrFolder)
 menu_file.add_separator()
+menu_file.add_command(label ="clone public repository", command = clonePublicClick)
+menu_file.add_command(label ="clone private repository", command = clonePrivateClick)
 menu_file.add_command(label ="git init", command = gitInitClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git status", command = gitStatusClick)
