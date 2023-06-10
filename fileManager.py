@@ -616,17 +616,17 @@ menu_file.add_separator()
 menu_file.add_command(label ="git commit (selected file)", command = gitCommitClick)
 menu_file.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
 
-#제가할 부분
-menu_empty = Menu(root, tearoff = 0)
-menu_empty.add_command(label ="Create", command = createFileOrFolder)
-menu_empty.add_command(label ="Refresh", command = pathChange)
-menu_empty.add_separator()
-menu_empty.add_command(label ="git status (this repo)", command = gitStatusClick)
-menu_empty.add_separator()
-menu_empty.add_command(label ="git init (this folder)", command = gitInitClick)
-menu_empty.add_command(label ="git commit (whole folder)", command = gitCommitClick)
-menu_empty.add_separator()
-menu_empty.add_command(label ="Quit", command = root.quit)
+# 1차 과제에서 허공에 우클릭을 할 경우로 인하여 문제가 발생, 제거함
+# menu_empty = Menu(root, tearoff = 0)
+# menu_empty.add_command(label ="Create", command = createFileOrFolder)
+# menu_empty.add_command(label ="Refresh", command = pathChange)
+# menu_empty.add_separator()
+# menu_empty.add_command(label ="git status (this repo)", command = gitStatusClick)
+# menu_empty.add_separator()
+# menu_empty.add_command(label ="git init (this folder)", command = gitInitClick)
+# menu_empty.add_command(label ="git commit (whole folder)", command = gitCommitClick)
+# menu_empty.add_separator()
+# menu_empty.add_command(label ="Quit", command = root.quit)
 
 
 # Mouse Inputs
