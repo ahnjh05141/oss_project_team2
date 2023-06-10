@@ -1,4 +1,9 @@
 from distutils.dir_util import copy_tree
+import gitCommitHistory
+import random
+import getpass
+from datetime import datetime
+
 
 class gitRepository:
     dirName = ""
@@ -8,7 +13,8 @@ class gitRepository:
     staged = []
     committed = []
     restored = []
-    
+    commits = []    #Commit 객체 모음 - Commit History에 사용
+
     def __init__(self, name):
         self.dirName = name
 
@@ -94,9 +100,15 @@ def gitMV(file, newfile, repo):    # git mv
     repo.committed.remove(file)
     repo.staged.append(newfile)
 
-def gitCommit(file, repo):    # git commit
+def gitCommit(file, repo, message):    # git commit
     repo.staged.remove(file)
     repo.committed.append(file)
+    #여기서부터 프로젝트 2에 추가한 부분 (커밋 히스토리)
+    characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    commit_id = ''.join(random.choice(characters) for _ in range(6))
+    commit_date_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+    commit = gitCommitHistory.Commit(commit_id, getpass.getuser(), message, commit_date_time)
+    repo.commits.append(commit)
 
 def gitModified(file, repo):
     if file in repo.unmodified:

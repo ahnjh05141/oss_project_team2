@@ -4,6 +4,8 @@ import sys
 import ctypes
 import pathlib
 import shutil
+
+import gitCommitHistory
 import gitRepository
 
 # GUI Skeleton
@@ -15,7 +17,10 @@ root.grid_columnconfigure(2, weight=1)
 root.grid_rowconfigure(2, weight=1)
 
 path_gitData = os.path.join(os.getcwd(), "gitData") # git Restore을 위해 백업파일을 저장하는 폴더(gitData)의 위치
-shutil.rmtree(path_gitData) # gitData를 제거 후
+try:
+    shutil.rmtree(path_gitData) # gitData를 제거 후
+except:
+    print("gitData폴더 내부의 파일들을 제거해주세요.")
 os.mkdir("gitData") # 다시 생성(gitData의 백업 파일을 초기화 하는 기능)
 
 repos = []
@@ -325,7 +330,7 @@ def gitCommit(file_message):
                 print("\nPlesase enter commit message \n")
                 return
             else:
-                gitRepository.gitCommit(file, repos[findMasterBranch()][0])
+                gitRepository.gitCommit(file, repos[findMasterBranch()][0], message)
                 commits[message] = repos[findMasterBranch()][0].committed
                 print("\n", file, " Successfully committed with message", message, "\n")
                 gitStatus()
@@ -447,6 +452,7 @@ def gitStatusClick(*event):
     gitStatus()
 
 def gitInitClick(*event):
+    #print(list.curselection())
     file = list.get(list.curselection()[0])
     path = os.path.join(currentPath.get(), removeIcon(file))
     gitInit(path)
@@ -506,6 +512,39 @@ def gitCommitClick(*event):
     else:
         print("\nMake repository first \n")
         return
+
+def CommitHistoryClick(*event):
+   try:
+    file = list.get(list.curselection()[0])
+    path = os.path.join(currentPath.get(), removeIcon(file))
+    currentDirName = path.split('\\')[-1]
+
+   except:
+       print("\nPlease choose a file first \n")
+       return
+
+
+   # temprepo = gitRepository.gitRepository(currentDirName)  # 레포 객체 생성
+   # temprepo.dirName = currentDirName
+   #
+   # gitRepository.gitRepositoryCreation(os, path, temprepo, path_gitData)
+
+
+   try:
+       repo = repos[findMasterBranch()][0]
+       history_gui = gitCommitHistory.GitCommitHistoryGUI()
+       for i, item in enumerate(repo.commits):
+           history_gui.add_commit(item)
+
+       # 커밋 기록을 그래프로 출력합니다.
+       history_gui.show_commit_history()
+
+       history_gui.root.mainloop()
+   except:
+       print("\nPlease commit first \n")
+       return
+
+
     
 def emptyCommand():
     print("")
@@ -575,7 +614,9 @@ menu_file.add_command(label ="git remove --cached", command = gitRMCachedClick)
 menu_file.add_command(label ="git move", command = gitMVClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git commit (selected file)", command = gitCommitClick)
+menu_file.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
 
+#제가할 부분
 menu_empty = Menu(root, tearoff = 0)
 menu_empty.add_command(label ="Create", command = createFileOrFolder)
 menu_empty.add_command(label ="Refresh", command = pathChange)
