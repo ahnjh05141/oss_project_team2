@@ -492,6 +492,8 @@ branch_menu.add_command(label="Rename", command=branchRenameClick)
 branch_menu.add_command(label="Checkout", command=branchCheckoutClick)
 branch_menu.add_separator()
 branch_menu.add_command(label="Show", command=branchShowClick)
+branch_menu.add_separator()
+branch_menu.add_command(label="Merge", command=branchMergeClick)
 
 
 menubar.add_cascade(label="File", menu=file_menu)

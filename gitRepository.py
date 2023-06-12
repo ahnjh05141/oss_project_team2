@@ -187,13 +187,11 @@ class Repository():
     # Merge Branch
     def merge_branches(self, name):
         branch = self.get_branch(name)
-        master_branch = self.get_branch("MASTER")
+        current_branch = self.get_branch(self.current_branch)
         if branch:
-            if name != self.current_branch:
-                print(branch.branchPath, master_branch.branchPath)
-                move(branch.branchPath, master_branch.branchPath)
-                self.delete_branch(name)
-                print(name, "merged to MASTER")
+            if branch != current_branch:
+                move(branch.branchPath, current_branch.branchPath)
+                print(name, "successfully merged to current branch")
             else:
                 print("Can not merge current branch.\n")
         else:
