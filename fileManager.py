@@ -7,8 +7,6 @@ import shutil
 
 import gitCommitHistory
 import gitRepository
-import clone
-
 
 # GUI Skeleton
 
@@ -32,7 +30,7 @@ ModifiedTime = {}
 # File Managing Methods ----------------------------------------------------------------------------------
 
 def removeIcon(picked):
-    icons = ["📄", "📁", "ⓤ", "ⓜ", "ⓢ", "ⓒ"]
+    icons = ["📄", "📁", "ⓤ", "ⓜ", "ⓢ", "ⓒ", "\""]
     for icon in icons:
         picked = picked.strip(icon)
     return picked
@@ -186,7 +184,7 @@ def findMasterBranch():
     for i in range(0, len(repos)):
         if repos[i][3] == "MASTER":
             return i
-
+    
 def checkStatus(file, repo):
     return gitRepository.whichStatus(file, repo)    
 
@@ -213,12 +211,13 @@ def gitStatus():
 def gitAdd(file):
     try:
         status = checkStatus(file, repos[findMasterBranch()][0])
+        print(file, status)
     except:
         print("\nMake repository first \n")
         return
     
     if status == "not_exists":
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
+        print("\nThere is no file called [",file,"] in directory :", repos[findMasterBranch()][2])
     else:
         gitRepository.gitAdd(file, repos[findMasterBranch()][0])
         print("\n", file, " Successfully added \n")
@@ -450,25 +449,6 @@ def runTerminalCommands(event):
 
 # Git Click Commands
 
-def clonePublicClick(*event):
-    print("Enter GitHub address (https://~~~.git)")
-    address = input()
-    file = list.get(list.curselection()[0])
-    local = os.path.join(currentPath.get(), removeIcon(file))
-    clone.clone_public(local, address)
-
-def clonePrivateClick(*event):
-    print("Enter GitHub address (https://~~~.git)")
-    address = input()
-    print("Enter the ID")
-    id = input()
-    print("Enter the token (PAT)")
-    token = input()
-    file = list.get(list.curselection()[0])
-    local = os.path.join(currentPath.get(), removeIcon(file))
-    clone.clone_private(local, address, id)
-    clone.store(address, id, token)
-
 def gitStatusClick(*event):
     gitStatus()
 
@@ -605,11 +585,41 @@ terminal.grid(sticky="NSEW", column=1, row=3, columnspan=2, ipady=10, ipadx=10)
 
 # Menu Bar
 menubar = Menu(root)
-menubar.add_command(label="Create", command=createFileOrFolder)
-menubar.add_command(label="Open", command=changePathByClick)
-menubar.add_command(label="Rename", command=renameFileOrFolder)
-menubar.add_command(label="Duplicate", command=duplicateFileOrFolder)
-menubar.add_command(label="Remove (Delete)", command=removeFileOrFolder)
+
+menubar_1 = Menu(menubar, tearoff=0)
+menubar_2 = Menu(menubar, tearoff=0)
+menubar_3 = Menu(menubar, tearoff=0)
+
+menubar_1.add_command(label="Create", command=createFileOrFolder)
+menubar_1.add_separator()
+menubar_1.add_command(label="Open", command=changePathByClick)
+menubar_1.add_command(label="Rename", command=renameFileOrFolder)
+menubar_1.add_command(label="Duplicate", command=duplicateFileOrFolder)
+menubar_1.add_separator()
+menubar_1.add_command(label="Remove (Delete)", command=removeFileOrFolder)
+
+menubar_2.add_command(label ="git init", command = gitInitClick)
+menubar_2.add_separator()
+menubar_2.add_command(label ="git status", command = gitStatusClick)
+menubar_2.add_separator()
+menubar_2.add_command(label ="git add", command = gitAddClick)
+menubar_2.add_command(label ="git restore", command = gitRestoreClick)
+menubar_2.add_command(label ="git remove", command = gitRMClick)
+menubar_2.add_command(label ="git remove --cached", command = gitRMCachedClick)
+menubar_2.add_command(label ="git move", command = gitMVClick)
+menubar_2.add_separator()
+menubar_2.add_command(label ="git commit (selected file)", command = gitCommitClick)
+menubar_2.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
+
+menubar_3.add_command(label ="Create", command = emptyCommand)
+menubar_3.add_command(label ="Delete", command = emptyCommand)
+menubar_3.add_command(label ="Rename", command = emptyCommand)
+menubar_3.add_command(label ="Checkout", command = emptyCommand)
+
+menubar.add_cascade(label="Files", menu = menubar_1)
+menubar.add_cascade(label="GIT", menu = menubar_2)
+menubar.add_cascade(label="Branch", menu = menubar_3)
+
 menubar.add_command(label="Refresh (F5)", command=pathChange)
 menubar.add_command(label="Quit", command=root.quit)
 
@@ -624,8 +634,6 @@ menu_file.add_command(label ="Duplicate", command = duplicateFileOrFolder)
 menu_file.add_command(label ="Rename", command = renameFileOrFolder)
 menu_file.add_command(label ="Delete", command = removeFileOrFolder)
 menu_file.add_separator()
-menu_file.add_command(label ="clone public repository", command = clonePublicClick)
-menu_file.add_command(label ="clone private repository", command = clonePrivateClick)
 menu_file.add_command(label ="git init", command = gitInitClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git status", command = gitStatusClick)
