@@ -1,13 +1,13 @@
 from tkinter import *
+
 import os
 import sys
-import ctypes
 import pathlib
 import shutil
 
 import gitCommitHistory
-import gitRepository
 import clone
+from gitRepository import Git, Repository, Branch
 
 
 # GUI Skeleton
@@ -51,15 +51,15 @@ def pathChange(*event):
         if os.path.isfile(path):
             try:
                 time = os.path.getmtime(path)
-                if time != ModifiedTime[file] and not gitRepository.isRestored(file, repos[findMasterBranch()][0]):
-                    gitModified(file)
+                if time != ModifiedTime[file] and Git.get_current_repo().get_current_branch().get_status(file) != 'restored':
+                    Git.gitModified(file)
                     ModifiedTime[file] = time
             except:
                 pass
 
         if os.path.isfile(path):
-            if file is not None and len(repos) != 0:
-                status = checkStatus(file, repos[findMasterBranch()][0])
+            if file is not None and Git.get_current_repo():
+                status = Git.get_current_repo().get_current_branch().get_status(file)
 
                 if status == "unmodified":
                     icon = "ⓤ"
@@ -89,7 +89,7 @@ def changePathByClick(event=None):      # open
         if os.path.isfile(path):
             time = os.path.getmtime(path)
             ModifiedTime[picked] = time
-            
+            print(path)
             os.system("start "+ path)
         else:
             currentPath.set(path)
@@ -178,255 +178,47 @@ def removeFileOrFolder(*event):
     pathChange('')
 
 
-
-
-# Git repo skeleton => repos[ [REPO_OBJECT, path, name, branch, message] , [], ... ]
-
-
-def findMasterBranch():
-    for i in range(0, len(repos)):
-        if repos[i][3] == "MASTER":
-            return i
-
-def checkStatus(file, repo):
-    return gitRepository.whichStatus(file, repo)    
-
-
-# GIT Command Methods ----------------------------------------------------------------------
-
-def gitStatus():
-    pathChange('')
-    try:
-        repo = repos[findMasterBranch()][0]
-        print("==================================================================")
-        print("Current Repository :", repo.dirName)
-        print("Current Branch :", branches[-1])
-        print("* Commits :",str(commits).replace('[', '').replace(']', '').replace('\'', ''))
-        print("\nUnmodified Files :",str(repo.unmodified).replace('\'',''))
-        print("Modified Files :",str(repo.modified).replace('\'',''))
-        print("Staged Files :",str(repo.staged).replace('\'',''))
-        print("Committed Files :",str(repo.committed).replace('\'',''))
-        print("==================================================================\n")
-        
-    except:
-        print("\nMake repository first \n")
-        return
-
-def gitAdd(file):
-    try:
-        status = checkStatus(file, repos[findMasterBranch()][0])
-    except:
-        print("\nMake repository first \n")
-        return
-    
-    if status == "not_exists":
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
-    else:
-        gitRepository.gitAdd(file, repos[findMasterBranch()][0])
-        print("\n", file, " Successfully added \n")
-        
-
-def gitRestore(file,path):
-    try:
-        status = checkStatus(file, repos[findMasterBranch()][0])
-    except:
-        print("\nMake repository first \n")
-        return
-    
-    if status == "not_exists":
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
-    elif status == "modified" or status == "staged":
-        gitRepository.gitRestore(file, repos[findMasterBranch()][0])
-        path_repo = repos[findMasterBranch()][1] # 레포의 디렉토리
-        path_subroot = path[len(path_repo):] # 레포에서 해당 폴더까지 도달하는 중간 과정
-        path_duplicate = path_gitData + path_subroot # gitData에 저장된 복제본의 위치
-        os.remove(path) # 로컬에서 지우고
-        shutil.copy2(path_duplicate, path) # 백업에서 로컬로 복제
-        print("\n", file, " Successfully restored \n")
-    else:
-        print("\nThere is no modified or staged file called [", file, "]")
-        
-
-def gitRM(file, path):
-    try:
-        status = checkStatus(file, repos[findMasterBranch()][0])
-    except:
-        print("\nMake repository first \n")
-        return
-
-    if status == "not_exists":
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2],"\n")
-    elif status == "untracked":
-        print("\nThere is no tracked file called [", file, "]")
-    else:
-        gitRepository.gitRM(file, repos[findMasterBranch()][0])
-        os.remove(path)
-        print("\n", file, " Successfully staged remove \n")
-
-
-def gitRMCached(file):
-    try:
-        status = checkStatus(file, repos[findMasterBranch()][0])
-        print(status)
-    except:
-        print("\nMake repository first \n")
-        return
-    
-    if status == "not_exists":
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2],"\n")
-    elif status == "untracked":
-        print("\nThere is no tracked file called [", file, "]")
-    else:
-        gitRepository.gitRMCached(file, repos[findMasterBranch()][0])
-        print("\n", file, " Successfully staged remove \n")
-
-
-def gitMV(file_newname):
-    if len(repos) > 0:
-        try:
-            file = file_newname.split(' ')[0]
-            newname = file_newname.split(' ')[1]
-            path = os.path.join(currentPath.get(), file)
-            newpath = os.path.join(currentPath.get(), newname)
-        except:
-            print("\nWrong Command\n")
-            return
-        
-        try:
-            status = checkStatus(file, repos[findMasterBranch()][0])
-        except:
-            print("\nMake repository first \n")
-            return
-
-        if status == "not_exists":
-            print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2],"\n")
-        elif status == "committed":
-                os.rename(path, newpath)
-                pathChange('')
-                gitRepository.gitMV(file, newname, repos[findMasterBranch()][0])
-                print("\n", file, " Successfully renamed to staging area \n")
-        else:
-            print("\nThere is no commited file called [", file, "]")
-    else:
-        print("\nMake repository first \n")
-        return
-
-def gitCommit(file_message):
-    if len(repos) > 0:
-        try:
-            file = file_message.split('-m ')[0].replace(' ', '')
-            message = file_message.split('-m ')[1]
-
-        except:
-            file = file_message.replace(' ', '')
-            message = ""
-            
-        try:
-            status = checkStatus(file, repos[findMasterBranch()][0])
-        except:
-            print("\nMake repository first \n")
-            return
-        
-        if status == "not_exists":
-            print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
-        elif status == "staged":
-            if message == "":
-                print("\nPlesase enter commit message \n")
-                return
-            else:
-                gitRepository.gitCommit(file, repos[findMasterBranch()][0], message)
-                commits[message] = repos[findMasterBranch()][0].committed
-                print("\n", file, " Successfully committed with message", message, "\n")
-                gitStatus()
-        else:
-            print("\nThere is no staged file called [", file, "] in staging area")
-    else:
-        print("\nMake repository first \n")
-        return
- 
-
-def gitModified(file):
-    try:
-        status = checkStatus(file, repos[findMasterBranch()][0])
-    except:
-        print("\nMake repository first \n")
-        return
-    
-    try:
-        gitRepository.gitModified(file, repos[findMasterBranch()][0])
-        print(file, "has been Modified\n")
-    except:
-        print("\nThere is no file called [", file, "] in directory :", repos[findMasterBranch()][2])
-
-
-
-def gitInit(path):
-    currentDirName = path.split('\\')[-1]
-           
-    for i in range(0, len(repos)):
-        if currentDirName in repos[i][2]:       # 현재 경로와 레포에 추가돼있는 경로를 비교하여 중복을 방지
-            print("\nRepository already exists :", currentDirName, "\n")
-            return
-
-    temprepo = gitRepository.gitRepository(currentDirName)    # 레포 객체 생성
-    temprepo.dirName = currentDirName
-
-    gitRepository.gitRepositoryCreation(os, path, temprepo, path_gitData)
-
-    branch = "MASTER"
-    
-    message = ""
-    repos.append([temprepo, path, currentDirName, branch, message])    # 레포 리스트에 추가
-
-    print("\n* New Git Repo :", path, "- ("+branch+")")
-    gitStatus()
-    
-
+# GIT Command Methods
 
 def git(command):
     if command == 'help':
         print("git help")
         
     elif command == 'status':
-        gitStatus()
+        Git.gitStatus()
         
     elif command == 'init':
-        gitInit(currentPath.get())
+        Git.gitInit(currentPath.get())                              ### Test Code, Please Edit This Line.
         
     elif command.startswith('add '):
         file = command.split('add ')[1]
-        file = removeIcon(file)
-        gitAdd(file)
+        Git.gitAdd(file)
         
     elif command.startswith('restore '):
         file = command.split('restore ')[1]
-        file = removeIcon(file)
-        gitRestore(file)
+        Git.gitRestore(file)
         
     elif command.startswith('rm '):
         if command.startswith('rm --cached '):
             file = command.split('rm --cached ')[1]
-            file = removeIcon(file)
-            gitRMCached(file)
+            Git.gitRMCached(file, currentPath.get())
         else:
             file = command.split('rm ')[1]
-            file = removeIcon(file)
-            gitRM(file)
+            Git.gitRM(file, currentPath.get())
 
     elif command.startswith('mv '):
         file_newname = command.split('mv ')[1]
-        file = removeIcon(file)
-        gitMV(file_newname)
+        Git.gitMV(file_newname)
         
     elif command.startswith('commit '):
         file_message = command.split('commit ')[1]
-        file = removeIcon(file)
-        gitCommit(file_message)
+        Git.gitCommit(file_message)
         
     else:
         print("> Unknown GIT command [ git",command,"] found")
 
 
+   
 def runTerminalCommands(event):
     line = terminal.get()
     terminal.delete(0, len(line))
@@ -449,25 +241,6 @@ def runTerminalCommands(event):
         print("> Unknown command [",line,"] found")
 
 
-# Git Branch Commands
-
-def createBranch():
-    print("create")
-
-def deleteBranch():
-    print("delete")
-
-def renameBranch():
-    print("rename")
-    
-def mergeBranch():
-    print("merge")
-
-def checkoutBranch():
-    print("checkout")
-
-    
-    
 # Git Click Commands
 
 def clonePublicClick(*event):
@@ -488,7 +261,7 @@ def clonePrivateClick(*event):
     clone.store(address, id, token)
 
 def gitStatusClick(*event):
-    gitStatus()
+    Git.gitStatus()
 
 def gitInitClick(*event):
     try:
@@ -496,12 +269,12 @@ def gitInitClick(*event):
         path = os.path.join(currentPath.get(), removeIcon(file))
     except:
         path = currentPath.get()
-    gitInit(path)
+    Git.gitInit(path)
 
 def gitAddClick(*event):
     try:
         file = list.get(list.curselection()[0])
-        gitAdd(removeIcon(file))
+        Git.gitAdd(removeIcon(file))
     except:
         print("\nPlease choose a file first \n")
 
@@ -509,7 +282,7 @@ def gitRestoreClick(*event):
     try:
         file = list.get(list.curselection()[0])
         path = os.path.join(currentPath.get(), removeIcon(file))
-        gitRestore(removeIcon(file),path)
+        Git.gitRestore(removeIcon(file), path)
     except:
         print("\nPlease choose a file first \n")
 
@@ -517,23 +290,23 @@ def gitRMClick(*event):
     try:
         file = list.get(list.curselection()[0])
         path = os.path.join(currentPath.get(), removeIcon(file))
-        gitRM(removeIcon(file),path)
+        Git.gitRM(removeIcon(file),path)
     except:
         print("\nPlease choose a file first \n")
 
 def gitRMCachedClick(*event):
     try:
         file = list.get(list.curselection()[0])
-        gitRMCached(removeIcon(file))
+        Git.gitRMCached(removeIcon(file))
     except:
         print("\nPlease choose a file first \n")
 
 def gitMVClick(*event):
-    if len(repos) > 0:
+    if Git.get_current_repo() and Git.get_current_repo().get_current_branch():
         newname = str(input("new name : "))
         try:
             file = list.get(list.curselection()[0])
-            gitMV(removeIcon(file)+" "+newname)
+            Git.gitMV(removeIcon(file)+" "+newname)
         except:
             print("\nPlease choose a file first \n")
     else:
@@ -541,15 +314,75 @@ def gitMVClick(*event):
         return
 
 def gitCommitClick(*event):
-    if len(repos) > 0:
+    if Git.get_current_repo() and Git.get_current_repo().get_current_branch():
         message = str(input("commit message : "))
         try:
             file = list.get(list.curselection()[0])
-            gitCommit(removeIcon(file)+" -m \""+message+"\"")
+            Git.gitCommit(removeIcon(file)+" -m \""+message+"\"")
         except:
             directory = os.listdir(currentPath.get())
             for file in directory:
-                gitCommit(removeIcon(file)+" -m \""+message+"\"")
+                Git.gitCommit(removeIcon(file)+" -m \""+message+"\"")
+    else:
+        print("\nMake repository first \n")
+        return
+
+
+    
+def branchCreateClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        name = str(input("branch name : "))
+        pathChange('')
+        repo.create_branch(name, currentPath.get())
+    else:
+        print("\nMake repository first \n")
+        return
+    
+def branchDeleteClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        repo.display_branches()
+        name = str(input("branch name for delete : "))
+        repo.delete_branch(name)
+    else:
+        print("\nMake repository first \n")
+        return
+    
+def branchRenameClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        repo.display_branches()
+        newname = str(input("new branch name : "))
+        repo.rename_branch(newname)
+    else:
+        print("\nMake repository first \n")
+        return
+
+def branchCheckoutClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        repo.display_branches()
+        name = str(input("branch name : "))
+        repo.checkout_branch(name)
+    else:
+        print("\nMake repository first \n")
+        return
+
+def branchShowClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        repo.display_branches()
+    else:
+        print("\nMake repository first \n")
+        return
+    
+def branchMergeClick(*event):
+    repo = Git.get_current_repo()
+    if repo:
+        repo.display_branches()
+        name = str(input("branch name to merge : "))
+        repo.merge_branches(name)
     else:
         print("\nMake repository first \n")
         return
@@ -586,7 +419,6 @@ def CommitHistoryClick(*event):
        return
 
 
-    
 def emptyCommand():
     print("")
 
@@ -626,58 +458,62 @@ terminal.grid(sticky="NSEW", column=1, row=3, columnspan=2, ipady=10, ipadx=10)
 # Menu Bar
 menubar = Menu(root)
 
-menubar_1 = Menu(menubar, tearoff=0)
-menubar_2 = Menu(menubar, tearoff=0)
-menubar_3 = Menu(menubar, tearoff=0)
+file_menu = Menu(menubar, tearoff=0)
+git_menu = Menu(menubar, tearoff=0)
+branch_menu = Menu(menubar, tearoff=0)
 
-menubar_1.add_command(label="Create", command=createFileOrFolder)
-menubar_1.add_separator()
-menubar_1.add_command(label="Open", command=changePathByClick)
-menubar_1.add_command(label="Rename", command=renameFileOrFolder)
-menubar_1.add_command(label="Duplicate", command=duplicateFileOrFolder)
-menubar_1.add_separator()
-menubar_1.add_command(label="Remove (Delete)", command=removeFileOrFolder)
+# File Menu
+file_menu.add_command(label="Create", command=createFileOrFolder)
+file_menu.add_separator()
+file_menu.add_command(label="Open", command=changePathByClick)
+file_menu.add_command(label="Rename", command=renameFileOrFolder)
+file_menu.add_command(label="Duplicate", command=duplicateFileOrFolder)
+file_menu.add_separator()
+file_menu.add_command(label="Remove (Delete)", command=removeFileOrFolder)
 
-menubar_2.add_command(label ="git init", command = gitInitClick)
-menubar_2.add_separator()
-menubar_2.add_command(label ="git status", command = gitStatusClick)
-menubar_2.add_separator()
-menubar_2.add_command(label ="git add", command = gitAddClick)
-menubar_2.add_command(label ="git restore", command = gitRestoreClick)
-menubar_2.add_command(label ="git remove", command = gitRMClick)
-menubar_2.add_command(label ="git remove --cached", command = gitRMCachedClick)
-menubar_2.add_command(label ="git move", command = gitMVClick)
-menubar_2.add_separator()
-menubar_2.add_command(label ="git commit (selected file)", command = gitCommitClick)
-menubar_2.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
+# GIT Menu
+git_menu.add_command(label ="git init", command = gitInitClick)
+git_menu.add_separator()
+git_menu.add_command(label ="git status", command = gitStatusClick)
+git_menu.add_separator()
+git_menu.add_command(label ="git add", command = gitAddClick)
+git_menu.add_command(label ="git restore", command = gitRestoreClick)
+git_menu.add_command(label ="git remove", command = gitRMClick)
+git_menu.add_command(label ="git remove --cached", command = gitRMCachedClick)
+git_menu.add_command(label ="git move", command = gitMVClick)
+git_menu.add_separator()
+git_menu.add_command(label ="git commit (selected file)", command = gitCommitClick)
+git_menu.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
 
-menubar_3.add_command(label ="Create", command = createBranch)
-menubar_3.add_command(label ="Delete", command = deleteBranch)
-menubar_3.add_command(label ="Rename", command = renameBranch)
-menubar_3.add_command(label ="Checkout", command = checkoutBranch)
+# Branch Menu
+branch_menu.add_command(label="Create", command=branchCreateClick)
+branch_menu.add_command(label="Delete", command=branchDeleteClick)
+branch_menu.add_command(label="Rename", command=branchRenameClick)
+branch_menu.add_command(label="Checkout", command=branchCheckoutClick)
+branch_menu.add_separator()
+branch_menu.add_command(label="Show", command=branchShowClick)
 
-menubar.add_cascade(label="Files", menu = menubar_1)
-menubar.add_cascade(label="GIT", menu = menubar_2)
-menubar.add_cascade(label="Branch", menu = menubar_3)
 
+menubar.add_cascade(label="File", menu=file_menu)
+menubar.add_cascade(label="GIT", menu=git_menu)
+menubar.add_cascade(label="Branch", menu=branch_menu)
 
 menubar.add_command(label="Refresh (F5)", command=pathChange)
-menubar.add_command(label="Quit", command=root.quit)
+menubar.add_command(label="Quit", command=root.destroy)
 
 root.config(menu=menubar)
 
 
-# Right Click Menu
 
+
+# Right Click Menu
 menu_file = Menu(root, tearoff = 0)
 menu_file.add_command(label ="Open", command = changePathByClick)
 menu_file.add_command(label ="Duplicate", command = duplicateFileOrFolder)
 menu_file.add_command(label ="Rename", command = renameFileOrFolder)
 menu_file.add_command(label ="Delete", command = removeFileOrFolder)
 menu_file.add_separator()
-menu_file.add_command(label ="clone public repository", command = clonePublicClick)
-menu_file.add_command(label ="clone private repository", command = clonePrivateClick)
-menu_file.add_command(label ="init (selected folder)", command = gitInitClick)
+menu_file.add_command(label ="git init", command = gitInitClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git status", command = gitStatusClick)
 menu_file.add_separator()
@@ -688,8 +524,6 @@ menu_file.add_command(label ="git remove --cached", command = gitRMCachedClick)
 menu_file.add_command(label ="git move", command = gitMVClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git commit (selected file)", command = gitCommitClick)
-menu_file.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
-
 
 menu_empty = Menu(root, tearoff = 0)
 menu_empty.add_command(label ="Create", command = createFileOrFolder)
@@ -699,8 +533,6 @@ menu_empty.add_command(label ="git status (this repo)", command = gitStatusClick
 menu_empty.add_separator()
 menu_empty.add_command(label ="git init (this folder)", command = gitInitClick)
 menu_empty.add_command(label ="git commit (whole folder)", command = gitCommitClick)
-menu_empty.add_separator()
-menu_empty.add_command(label ="Quit", command = root.quit)
 
 
 # Mouse Inputs
@@ -738,6 +570,6 @@ terminal.bind('<Return>', runTerminalCommands)
 
 # Run Program ---------------------------------------------------------------------------
 
-print(" < GIT File Manager > v.1.4 \n")
+print(" < GIT File Manager > v.1.6 \n")
 pathChange('')
 root.mainloop()
