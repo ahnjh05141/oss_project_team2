@@ -26,6 +26,7 @@ except:
 os.mkdir("gitData") # 다시 생성(gitData의 백업 파일을 초기화 하는 기능)
 
 repos = []
+
 commits = {}
 ModifiedTime = {}
 
@@ -198,7 +199,8 @@ def gitStatus():
     try:
         repo = repos[findMasterBranch()][0]
         print("==================================================================")
-        print("Current WorkSpace :", repo.dirName)
+        print("Current Repository :", repo.dirName)
+        print("Current Branch :", branches[-1])
         print("* Commits :",str(commits).replace('[', '').replace(']', '').replace('\'', ''))
         print("\nUnmodified Files :",str(repo.unmodified).replace('\'',''))
         print("Modified Files :",str(repo.modified).replace('\'',''))
@@ -371,12 +373,8 @@ def gitInit(path):
 
     gitRepository.gitRepositoryCreation(os, path, temprepo, path_gitData)
 
-
-    if len(repos) == 0:         # 처음 만든 레포라면, 마스터 브랜치를 달아주자
-        branch = "MASTER"
-    else:
-        branch = ""
-
+    branch = "MASTER"
+    
     message = ""
     repos.append([temprepo, path, currentDirName, branch, message])    # 레포 리스트에 추가
 
@@ -397,33 +395,38 @@ def git(command):
         
     elif command.startswith('add '):
         file = command.split('add ')[1]
+        file = removeIcon(file)
         gitAdd(file)
         
     elif command.startswith('restore '):
         file = command.split('restore ')[1]
+        file = removeIcon(file)
         gitRestore(file)
         
     elif command.startswith('rm '):
         if command.startswith('rm --cached '):
             file = command.split('rm --cached ')[1]
+            file = removeIcon(file)
             gitRMCached(file)
         else:
             file = command.split('rm ')[1]
+            file = removeIcon(file)
             gitRM(file)
 
     elif command.startswith('mv '):
         file_newname = command.split('mv ')[1]
+        file = removeIcon(file)
         gitMV(file_newname)
         
     elif command.startswith('commit '):
         file_message = command.split('commit ')[1]
+        file = removeIcon(file)
         gitCommit(file_message)
         
     else:
         print("> Unknown GIT command [ git",command,"] found")
 
 
-   
 def runTerminalCommands(event):
     line = terminal.get()
     terminal.delete(0, len(line))
@@ -446,24 +449,39 @@ def runTerminalCommands(event):
         print("> Unknown command [",line,"] found")
 
 
+# Git Branch Commands
 
+def createBranch():
+    print("create")
 
+def deleteBranch():
+    print("delete")
+
+def renameBranch():
+    print("rename")
+    
+def mergeBranch():
+    print("merge")
+
+def checkoutBranch():
+    print("checkout")
+
+    
+    
 # Git Click Commands
 
 def clonePublicClick(*event):
-    print("Enter GitHub address (https://~~~.git)")
-    address = input()
+    address = input("Enter GitHub address (https://~~~.git) \n>> ")
+    
     file = list.get(list.curselection()[0])
     local = os.path.join(currentPath.get(), removeIcon(file))
     clone.clone_public(local, address)
 
 def clonePrivateClick(*event):
-    print("Enter GitHub address (https://~~~.git)")
-    address = input()
-    print("Enter the ID")
-    id = input()
-    print("Enter the token (PAT)")
-    token = input()
+    address = input("Enter GitHub address (https://~~~.git) \n>> ")
+    id = input("Enter the ID \n>> ")
+    token = input("Enter the token (PAT) \n>> ")
+    
     file = list.get(list.curselection()[0])
     local = os.path.join(currentPath.get(), removeIcon(file))
     clone.clone_private(local, address, id)
@@ -473,9 +491,11 @@ def gitStatusClick(*event):
     gitStatus()
 
 def gitInitClick(*event):
-    #print(list.curselection())
-    file = list.get(list.curselection()[0])
-    path = os.path.join(currentPath.get(), removeIcon(file))
+    try:
+        file = list.get(list.curselection()[0])
+        path = os.path.join(currentPath.get(), removeIcon(file))
+    except:
+        path = currentPath.get()
     gitInit(path)
 
 def gitAddClick(*event):
@@ -631,10 +651,10 @@ menubar_2.add_separator()
 menubar_2.add_command(label ="git commit (selected file)", command = gitCommitClick)
 menubar_2.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
 
-menubar_3.add_command(label ="Create", command = emptyCommand)
-menubar_3.add_command(label ="Delete", command = emptyCommand)
-menubar_3.add_command(label ="Rename", command = emptyCommand)
-menubar_3.add_command(label ="Checkout", command = emptyCommand)
+menubar_3.add_command(label ="Create", command = createBranch)
+menubar_3.add_command(label ="Delete", command = deleteBranch)
+menubar_3.add_command(label ="Rename", command = renameBranch)
+menubar_3.add_command(label ="Checkout", command = checkoutBranch)
 
 menubar.add_cascade(label="Files", menu = menubar_1)
 menubar.add_cascade(label="GIT", menu = menubar_2)
@@ -657,7 +677,7 @@ menu_file.add_command(label ="Delete", command = removeFileOrFolder)
 menu_file.add_separator()
 menu_file.add_command(label ="clone public repository", command = clonePublicClick)
 menu_file.add_command(label ="clone private repository", command = clonePrivateClick)
-menu_file.add_command(label ="git init", command = gitInitClick)
+menu_file.add_command(label ="init (selected folder)", command = gitInitClick)
 menu_file.add_separator()
 menu_file.add_command(label ="git status", command = gitStatusClick)
 menu_file.add_separator()
@@ -670,17 +690,17 @@ menu_file.add_separator()
 menu_file.add_command(label ="git commit (selected file)", command = gitCommitClick)
 menu_file.add_command(label ="show commit history (selected repo)", command = CommitHistoryClick)
 
-# 1차 과제에서 허공에 우클릭을 할 경우로 인하여 문제가 발생, 제거함
-# menu_empty = Menu(root, tearoff = 0)
-# menu_empty.add_command(label ="Create", command = createFileOrFolder)
-# menu_empty.add_command(label ="Refresh", command = pathChange)
-# menu_empty.add_separator()
-# menu_empty.add_command(label ="git status (this repo)", command = gitStatusClick)
-# menu_empty.add_separator()
-# menu_empty.add_command(label ="git init (this folder)", command = gitInitClick)
-# menu_empty.add_command(label ="git commit (whole folder)", command = gitCommitClick)
-# menu_empty.add_separator()
-# menu_empty.add_command(label ="Quit", command = root.quit)
+
+menu_empty = Menu(root, tearoff = 0)
+menu_empty.add_command(label ="Create", command = createFileOrFolder)
+menu_empty.add_command(label ="Refresh", command = pathChange)
+menu_empty.add_separator()
+menu_empty.add_command(label ="git status (this repo)", command = gitStatusClick)
+menu_empty.add_separator()
+menu_empty.add_command(label ="git init (this folder)", command = gitInitClick)
+menu_empty.add_command(label ="git commit (whole folder)", command = gitCommitClick)
+menu_empty.add_separator()
+menu_empty.add_command(label ="Quit", command = root.quit)
 
 
 # Mouse Inputs
@@ -701,7 +721,7 @@ def right_click(event):
             menu_empty.grab_release()
         
   
-root.bind("<Button-3>", right_click)
+#root.bind("<Button-3>", right_click)
 
 
 # Keyboard Inputs
@@ -710,6 +730,7 @@ root.bind("<F5>", pathChange)
 root.bind("<Delete>", removeFileOrFolder)
 
 list.bind('<Double-1>', changePathByClick)
+list.bind('<Button-3>', right_click)
 
 terminal.bind('<Return>', runTerminalCommands)
 
