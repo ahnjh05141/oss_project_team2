@@ -63,6 +63,12 @@ git이 제공하는 커맨드를 <file>을 우클릭해서 원하는 커맨드�
   
 ### 프로젝트 2<br/>
   
+  Feature #1: Branch management 
+   ![branch](https://github.com/ahnjh05141/oss_project_team2/assets/130345605/b9345a66-8f5c-4385-94e6-4aac804cb787)
+
+    Branch 클릭 후, 사용자가 필요한 메뉴를 우클릭 후 작업을 수행할 수 있다. 
+  
+  
   Feature #3: Git commit history<br/>
   
   ![커밋히스토리 결과](https://github.com/ahnjh05141/oss_project_team2/assets/56011947/b6f28ef2-0cb8-4444-84cb-f6c766d7592a)
