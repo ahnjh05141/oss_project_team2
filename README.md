@@ -72,7 +72,10 @@ git이 제공하는 커맨드를 <file>을 우클릭해서 원하는 커맨드�
  
   Feature #2: Git Branch merge
   
-  gitRepository.py 의 class Repository에 구현하였습니다. 사용자가 입력한 브랜치 이름으로부터, 브랜치 객체와 path를 파악하여 Master 브랜치와 병합할 수 있게 구현하였습니다. 기존 브랜치의 폴더를 Master 브랜치에 move 함으로써, 기존 커밋 내용이 사라지지 않는 것을 구현하였습니다.****
+  gitRepository.py 의 class Repository에 구현하였습니다. 사용자가 입력한 브랜치 이름으로부터, 브랜치 객체와 path를 파악하여 Master 브랜치와 병합할 수 있게 구현하였습니다. 기존 브랜치의 폴더를 Master 브랜치에 move 함으로써, 기존 커밋 내용이 사라지지 않는 것을 구현하였습니다.
+  
+  
+  
   Feature #3: Git commit history<br/>
   
   ![커밋히스토리 결과](https://github.com/ahnjh05141/oss_project_team2/assets/56011947/b6f28ef2-0cb8-4444-84cb-f6c766d7592a)
